@@ -39,7 +39,7 @@ def describe_instances(session,region_list,*args,**kwargs):
             try:
                 paginator = client.get_paginator('describe_instances')
                 page_iterator = paginator.paginate()
-                filtered_iterator = page_iterator.search("Reservations[].Instances[?State.Name =='running'].{InstanceId: InstanceId,httptokens : MetadataOptions.HttpTokens,LaunchTime:LaunchTime}")
+                filtered_iterator = page_iterator.search("Reservations[].Instances[?State.Name =='running'].{InstanceId: InstanceId,httpendpoint: MetadataOptions.HttpEndpoint,httptokens : MetadataOptions.HttpTokens,LaunchTime:LaunchTime}")
                 
                 data = next(filtered_iterator)
                 if data:
@@ -72,7 +72,7 @@ def describe_instances(session,region_list,*args,**kwargs):
                 client = create_client(session,region)
                 query = (
     f"Reservations[].Instances[?State.Name=='running' && InstanceId=='{instance_id}']."
-    f"{{InstanceId: InstanceId, httptokens: MetadataOptions.HttpTokens,LaunchTime:LaunchTime}}"
+    f"{{InstanceId: InstanceId,httpendpoint: MetadataOptions.HttpEndpoint, httptokens: MetadataOptions.HttpTokens,LaunchTime:LaunchTime}}"
 )
                 try:
                     paginator = client.get_paginator('describe_instances')
@@ -123,9 +123,10 @@ def  cloudwatch_metrics(session,compiled_list,dur,metricname,*args,**kwargs):
             for values in value:
                 instance_id = values['InstanceId']
                 httptokens = values['httptokens']
+                httpendpoint = values['httpendpoint']
                 launch_date = values['LaunchTime'].date()
                 if metricname:
-                    headers = ["instanceid","region","http-tokens",metricname,"duration in days","launch_date"]
+                    headers = ["instanceid","region","httpendpoint","http-tokens",metricname,"duration in days","launch_date"]
                     response = cloudwatch_client.get_metric_statistics(Namespace='AWS/EC2',MetricName= metricname, Dimensions=[
                     {
                     'Name': 'InstanceId',
@@ -143,12 +144,12 @@ def  cloudwatch_metrics(session,compiled_list,dur,metricname,*args,**kwargs):
                     datapoints = jmespath.search('Datapoints[*].Sum', response)
                     total_sum = (sum(datapoints))
                     
-                    info = [instance_id,region,httptokens,int(total_sum),dur,launch_date]
+                    info = [instance_id,region,httpendpoint,httptokens,int(total_sum),dur,launch_date]
                     data_list.append(info)
                     
  
                 else:
-                    headers = ["instanceid","region","http-tokens","MetadataNoToken","MetadataNoTokenRejected","duration in days","launch_date","Comments"]
+                    headers = ["instanceid","region","httpendpoint","http-tokens","MetadataNoToken","MetadataNoTokenRejected","duration in days","launch_date","Comments"]
                     metricnamelist = ['MetadataNoToken', 'MetadataNoTokenRejected']
                     for metric_name in metricnamelist:
                         response = cloudwatch_client.get_metric_statistics(Namespace='AWS/EC2',MetricName= metric_name, Dimensions=[
@@ -176,7 +177,7 @@ def  cloudwatch_metrics(session,compiled_list,dur,metricname,*args,**kwargs):
                         else:
                             comment = "-"
 
-                    info = [instance_id,region,httptokens,int(metadatanotoken_sum),int(metadatanotokenrejected_sum),dur,launch_date,comment]
+                    info = [instance_id,region,httpendpoint,httptokens,int(metadatanotoken_sum),int(metadatanotokenrejected_sum),dur,launch_date,comment]
                     data_list.append(info)
                     
 
@@ -238,21 +239,16 @@ def getmetrics(ctx,region,instanceid,duration,metricname):
     cloudwatch_metrics(session,compiled_list,duration,metricname)
 
 
-    
-
-    
-    #print(data,region_name)
-    
-
-
 @main.command()
 @click.pass_context
 def V1toV2(ctx):
+    '''command to modify instances from IMDSv1 to IMDSv2'''
     pass
 
 @main.command()
 @click.pass_context
 def V2toV1(ctx):
+    '''command to modify instances from IMDSv2 to IMDSv1'''
     print(ctx.obj)
     pass
 
