@@ -215,7 +215,7 @@ def conversion(session,region_list,*args,**kwargs):
         
 
 
-@click.option('profilename','-profile', nargs = 1)
+@click.option('profilename','-profile', nargs = 1,help = "profile to use for the operation")
 @click.group()
 @click.pass_context
 def main(ctx,profilename):
