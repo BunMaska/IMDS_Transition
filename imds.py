@@ -3,7 +3,6 @@ import click
 import jmespath
 from datetime import datetime, timedelta
 from dateutil.tz import tzutc
-import pandas as pd
 from tabulate import tabulate
 
 session = boto3.Session()
