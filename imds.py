@@ -187,7 +187,29 @@ def  cloudwatch_metrics(session,compiled_list,dur,metricname,*args,**kwargs):
     print(table)
     
 
-     
+
+def conversion(session,region_list,*args,**kwargs):
+    
+    for region in region_list:
+        for instance_id in args[0]:
+            ec2_client = create_client(session,region)
+            if kwargs['v1tov2'] == True:
+                response = ec2_client.modify_instance_metadata_options(InstanceId= instance_id, HttpTokens='required')
+                metadataoptions = response['InstanceMetadataOptions']
+                if metadataoptions['HttpTokens'] == 'required' and response['ResponseMetadata']['HTTPStatusCode'] == 200:
+                    print("instance {} transitioned to IMDSV2 succesfully.".format(instance_id))
+                else:
+                    print("instance {} transition to IMDSV2 failed.".format(instance_id))
+                                                                                  
+            else:
+                response = ec2_client.modify_instance_metadata_options(InstanceId= instance_id, HttpTokens='optional')
+                metadataoptions = response['InstanceMetadataOptions']
+                if metadataoptions['HttpTokens'] == 'optional' and response['ResponseMetadata']['HTTPStatusCode'] == 200:
+                    print("instance {} transitioned to IMDSV1 succesfully.".format(instance_id))
+                else:
+                    print("instance {} transition to IMDSV1 failed.".format(instance_id))
+
+
 
 
 
@@ -205,6 +227,7 @@ def main(ctx,profilename):
         session = boto3.Session()
 
     ctx.obj = session
+
 
 
 
@@ -240,17 +263,29 @@ def getmetrics(ctx,region,instanceid,duration,metricname):
 
 
 @main.command()
+@click.option('region','--region',required = True,nargs = 1,help = "aws region of the instances")
+@click.option('instanceid','-id',multiple = True,required = True,help = "instance id")
 @click.pass_context
-def V1toV2(ctx):
+def V1toV2(ctx,region,instanceid):
     '''command to modify instances from IMDSv1 to IMDSv2'''
-    pass
+    session = ctx.obj
+    region_list = [region]
+    compiled_list = describe_instances(session,region_list,instanceid)
+    conversion(session,region_list,instanceid,v1tov2 = True)
+    
 
 @main.command()
+@click.option('region','--region',required = True,nargs = 1,help = "aws region of the instances")
+@click.option('instanceid','-id',multiple = True,required = True,help = "instance id")
 @click.pass_context
-def V2toV1(ctx):
+def V2toV1(ctx,region,instanceid):
     '''command to modify instances from IMDSv2 to IMDSv1'''
-    print(ctx.obj)
-    pass
+    session = ctx.obj
+    region_list = [region]
+    compiled_list = describe_instances(session,region_list,instanceid)
+    conversion(session,region_list,instanceid,v1tov2 = False)
+    
+    
 
 if __name__ == "__main__":
     main()
