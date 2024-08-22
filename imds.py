@@ -215,7 +215,7 @@ def conversion(session,region_list,*args,**kwargs):
         
 
 
-@click.option('profilename','-profile', nargs = 1,help = "profile to use for the operation")
+@click.option('profilename','--profile', nargs = 1,help = "profile to use for the operation")
 @click.group()
 @click.pass_context
 def main(ctx,profilename):
@@ -232,7 +232,7 @@ def main(ctx,profilename):
 
 @main.command()
 @click.option('region','--region',nargs = 1,default = 'All',help = "aws region")
-@click.option('instanceid','-id',multiple = True,help = "instance id")
+@click.option('instanceid','--id',multiple = True,help = "instance id")
 @click.option('--metricname','--metric',type=click.Choice(['MetadataNoToken', 'MetadataNoTokenRejected'], case_sensitive=False),help = "Choose the metric name .If not specified both metrics returned")
 @click.option('duration','--dur', required = True,type=click.IntRange(1, 456, clamp=True),help = "duration of metrics in days")
 @click.pass_context
@@ -257,8 +257,11 @@ def getmetrics(ctx,region,instanceid,duration,metricname):
         compiled_list = describe_instances(session,region_list,instanceid)
     
     
+    if compiled_list:
+        cloudwatch_metrics(session,compiled_list,duration,metricname)
+    else:
+        print("Bad response from service.Please try later")
 
-    cloudwatch_metrics(session,compiled_list,duration,metricname)
 
 
 @main.command()
@@ -269,7 +272,6 @@ def V1toV2(ctx,region,instanceid):
     '''command to modify instances from IMDSv1 to IMDSv2'''
     session = ctx.obj
     region_list = [region]
-    compiled_list = describe_instances(session,region_list,instanceid)
     conversion(session,region_list,instanceid,v1tov2 = True)
     
 
@@ -281,7 +283,6 @@ def V2toV1(ctx,region,instanceid):
     '''command to modify instances from IMDSv2 to IMDSv1'''
     session = ctx.obj
     region_list = [region]
-    compiled_list = describe_instances(session,region_list,instanceid)
     conversion(session,region_list,instanceid,v1tov2 = False)
     
     
